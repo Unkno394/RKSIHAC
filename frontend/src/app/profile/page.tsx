@@ -1,14 +1,82 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Prism from "@/components/Prism";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 type Tab = "profile" | "security";
 
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [avatar, setAvatar] = useState<string | null>(null);
+
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [about, setAbout] = useState("");
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+  const [currentEmail, setCurrentEmail] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setError("Нет токена — авторизуйтесь заново.");
+      return;
+    }
+
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${API_URL}/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error("Не удалось загрузить профиль");
+        const data = await res.json();
+        setFullName(data.full_name || "");
+        setEmail(data.email || "");
+        setCurrentEmail(data.email || "");
+        setAbout(data.about || "");
+        setAvatar(data.avatar_url || null);
+      } catch (err: any) {
+        setError(err?.message || "Ошибка загрузки профиля");
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setError("Нет токена — авторизуйтесь заново.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/auth/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          full_name: fullName,
+          about,
+          avatar_url: avatar,
+        }),
+      });
+      if (!res.ok) throw new Error("Не удалось сохранить профиль");
+      setSuccess("Профиль сохранён");
+    } catch (err: any) {
+      setError(err?.message || "Ошибка сохранения профиля");
+    }
+  };
 
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
@@ -33,7 +101,7 @@ const ProfilePage: React.FC = () => {
                 {avatar ? (
                   <img src={avatar} className="w-full h-full object-cover" alt="avatar" />
                 ) : (
-                  "VK"
+                  "Упс"
                 )}
               </div>
               <label className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-sky-500 hover:bg-sky-400 cursor-pointer flex items-center justify-center border shadow-xl">
@@ -53,8 +121,8 @@ const ProfilePage: React.FC = () => {
               </label>
             </div>
 
-            <h2 className="text-base font-semibold">Vladimir</h2>
-            <p className="text-xs text-slate-300 mb-5">@novarion</p>
+            <h2 className="text-base font-semibold">{fullName || "Без имени"}</h2>
+            <p className="text-xs text-slate-300 mb-5">{email}</p>
           </aside>
 
           {/* ПРАВАЯ КОЛОНКА */}
@@ -84,8 +152,19 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* ========= ПРОФИЛЬ ========= */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/40 rounded text-sm text-red-100">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/40 rounded text-sm text-emerald-100">
+                {success}
+              </div>
+            )}
+
             {activeTab === "profile" && (
-              <form className="space-y-6">
+              <form className="space-y-6" onSubmit={handleSaveProfile}>
                 {/* Статистика */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="rounded-2xl bg-white/10 p-4 text-center backdrop-blur-xl">
@@ -104,18 +183,13 @@ const ProfilePage: React.FC = () => {
 
                 {/* Поля профиля */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-slate-200 text-xs">Никнейм</label>
-                    <input
-                      className="w-full bg-white/10 border border-white/25 rounded-lg px-3 py-2 mt-1 text-sm"
-                      defaultValue="@novarion"
-                    />
-                  </div>
+                  
                   <div>
                     <label className="text-slate-200 text-xs">Отображаемое имя</label>
                     <input
                       className="w-full bg-white/10 border border-white/25 rounded-lg px-3 py-2 mt-1 text-sm"
-                      defaultValue="Vladimir Novarion"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
                     />
                   </div>
                 </div>
@@ -125,18 +199,13 @@ const ProfilePage: React.FC = () => {
                   <textarea
                     className="w-full bg-white/10 border border-white/25 rounded-lg px-3 py-2 mt-1 text-sm"
                     rows={3}
+                    value={about}
+                    onChange={(e) => setAbout(e.target.value)}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-slate-200 text-xs">Город</label>
-                    <input className="w-full bg-white/10 border border-white/25 rounded-lg px-3 py-2 mt-1 text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-slate-200 text-xs">Страна</label>
-                    <input className="w-full bg-white/10 border border-white/25 rounded-lg px-3 py-2 mt-1 text-sm" />
-                  </div>
+            
                 </div>
 
                 {/* Сохранить профиль */}
@@ -148,14 +217,16 @@ const ProfilePage: React.FC = () => {
                     Сохранить профиль
                   </button>
                 </div>
-
-                {/* Выйти со всех устройств */}
                 <div className="flex justify-end">
                   <button
                     type="button"
                     className="rounded-xl bg-red-500/90 px-6 py-2 text-sm font-semibold text-white shadow-lg shadow-red-500/40 hover:bg-red-400 transition"
+                    onClick={() => {
+                      localStorage.removeItem("access_token");
+                      window.location.href = "/auth";
+                    }}
                   >
-                    Выйти со всех устройств
+                    Выйти из профиля 
                   </button>
                 </div>
               </form>
@@ -172,7 +243,7 @@ const ProfilePage: React.FC = () => {
                     <label className="text-slate-200 text-xs">Текущий e-mail</label>
                     <input
                       className="w-full bg-white/5 border border-white/25 rounded-lg px-3 py-2 mt-1 text-slate-400 text-sm"
-                      defaultValue="you@example.com"
+                      value={currentEmail}
                       disabled
                     />
                   </div>

@@ -217,6 +217,31 @@
   }
 }
 
+/* Кастомный скролл */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3b82f6, #9333ea);
+  border-radius: 8px;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #6c8cff rgba(255, 255, 255, 0.05);
+}
+
+html, body {
+  overflow-y: auto;
+  scrollbar-color: #6c8cff rgba(255, 255, 255, 0.05);
+  scrollbar-width: thin;
+}
+
 /* Mobile Responsive */
 @media screen and (max-width: 650px) {
   .form-container {
