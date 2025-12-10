@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    Table,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -27,6 +28,7 @@ class User(Base):
     is_active = Column(Boolean, default=False)
     avatar_url = Column(String(500), nullable=True)
     about = Column(String(1000), nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
@@ -37,6 +39,41 @@ class User(Base):
 
     email_codes = relationship("EmailVerificationCode", back_populates="user")
     reset_tokens = relationship("PasswordResetToken", back_populates="user")
+    events = relationship("Event", secondary="event_participants", back_populates="participants")
+
+
+event_participants = Table(
+    "event_participants",
+    Base.metadata,
+    Column("event_id", UUID(as_uuid=True), ForeignKey("events.id"), primary_key=True),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True),
+)
+
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String(255), nullable=False)
+    short_description = Column(String(500), nullable=True)
+    description = Column(String(2000), nullable=False)
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    image_url = Column(String(500), nullable=False)
+    payment_info = Column(String(1000), nullable=True)
+    max_participants = Column(Integer, nullable=True)
+    city = Column(String(255), nullable=False, default="")
+    status = Column(String(50), nullable=False, default="active")  # active, upcoming, past, deleted
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    participants = relationship("User", secondary=event_participants, back_populates="events")
 
 
 class EmailVerificationCode(Base):

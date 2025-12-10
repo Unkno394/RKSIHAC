@@ -1,7 +1,9 @@
 # app/schemas/auth.py
 import re
-from uuid import UUID
+from datetime import datetime
 from typing import Optional
+from uuid import UUID
+
 from pydantic import BaseModel, EmailStr, validator
 
 
@@ -88,3 +90,58 @@ class ProfileUpdateRequest(BaseModel):
     full_name: Optional[str] = None
     about: Optional[str] = None
     avatar_url: Optional[str] = None
+
+
+class UserListResponse(BaseModel):
+    id: UUID
+    full_name: str
+    email: EmailStr
+    role: str
+    created_at: datetime
+    is_active: bool
+    is_deleted: bool
+    avatar_url: Optional[str] = None
+
+
+class AdminUserUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+
+
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str
+
+
+class AdminResetPasswordResponse(BaseModel):
+    message: str
+    new_password: str
+
+
+class EventRequest(BaseModel):
+    title: str
+    short_description: Optional[str] = None
+    description: str
+    start_date: datetime
+    end_date: datetime
+    image_url: str
+    payment_info: Optional[str] = None
+    max_participants: Optional[int] = None
+    participant_ids: list[UUID] = []
+
+
+class EventResponse(BaseModel):
+    id: UUID
+    title: str
+    short_description: Optional[str]
+    description: str
+    start_date: datetime
+    end_date: datetime
+    image_url: str
+    payment_info: Optional[str]
+    max_participants: Optional[int]
+    status: str
+    is_deleted: bool
+    participants: list[UUID]
+
+    class Config:
+        orm_mode = True

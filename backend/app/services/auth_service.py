@@ -122,3 +122,9 @@ def verify_reset_code(db: Session, email: str, token: str):
     record = auth_repo.get_valid_reset_token(db, token, email=email)
     if not record:
         raise ValueError("Неверный или истёкший код")
+
+
+def admin_reset_password(db: Session, user: User, new_password: str):
+    new_hash = hash_password(_trim_password(new_password))
+    user_repo.update_password(db, user, new_hash)
+    email_utils.send_password_changed(user.email, new_password)

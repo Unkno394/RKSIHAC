@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import LightRays from "@/components/LightRays";
+import LightRays from "@/shared/ui/LightRays";
 
 type TicketType = "entry" | "table" | "vip";
 

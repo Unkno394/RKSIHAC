@@ -4,35 +4,14 @@ import './auth.css';
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
-import Modal from '@/components/Modal';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
-
-const fetchJson = async (url: string, options: RequestInit, timeoutMs = 12000) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    return res;
-  } finally {
-    clearTimeout(id);
-  }
-};
-
-const parseErrorMessage = async (res: Response) => {
-  try {
-    const data = await res.json();
-    if (typeof data?.detail === 'string') return data.detail;
-    if (Array.isArray(data?.detail)) {
-      const first = data.detail[0];
-      if (typeof first === 'string') return first;
-      if (first?.msg) return first.msg;
-    }
-    return 'Ошибка запроса';
-  } catch {
-    return 'Ошибка запроса';
-  }
-};
+import Modal from '@/shared/ui/Modal';
+import {
+  login,
+  register,
+  forgotPassword,
+  verifyResetCode,
+  resetPassword,
+} from '@/shared/api/auth';
 
 export default function LoginForm() {
   const [isActive, setIsActive] = useState(false);
@@ -88,17 +67,7 @@ export default function LoginForm() {
     const password = formData.get('password') as string;
 
     try {
-      const res = await fetchJson(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!res.ok) {
-        throw new Error(await parseErrorMessage(res));
-      }
-
-      const data = await res.json();
+      const data = await login({ email, password });
       localStorage.setItem('access_token', data?.access_token);
       router.push('/');
     } catch (err: any) {
@@ -121,14 +90,7 @@ export default function LoginForm() {
     const email = formData.get('email') as string;
 
     try {
-      const res = await fetchJson(`${API_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      if (!res.ok) {
-        throw new Error(await parseErrorMessage(res));
-      }
+      await forgotPassword(email);
       setResetEmail(email);
       setResetMessage('Письмо с кодом отправлено. Проверьте почту.');
       setResetStep('verify');
@@ -152,14 +114,7 @@ export default function LoginForm() {
     const token = formData.get('code') as string;
 
     try {
-      const res = await fetchJson(`${API_URL}/auth/verify-reset-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail, token })
-      });
-      if (!res.ok) {
-        throw new Error(await parseErrorMessage(res));
-      }
+      await verifyResetCode(resetEmail, token);
       setResetMessage('Код подтверждён. Введите новый пароль.');
       setResetToken(token);
       setResetStep('reset');
@@ -184,14 +139,7 @@ export default function LoginForm() {
     const new_password_confirm = formData.get('new_password_confirm') as string;
 
     try {
-      const res = await fetchJson(`${API_URL}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail, token: resetToken, new_password, new_password_confirm })
-      });
-      if (!res.ok) {
-        throw new Error(await parseErrorMessage(res));
-      }
+      await resetPassword({ email: resetEmail, token: resetToken, new_password, new_password_confirm });
       setResetMessage('Пароль успешно обновлён. Можно войти.');
       setShowResetModal(false);
       setIsActive(false);
@@ -224,18 +172,7 @@ export default function LoginForm() {
       };
 
       console.log('[auth] register payload', payload);
-      const res = await fetchJson(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const errMsg = await parseErrorMessage(res);
-        console.error('[auth] register status', res.status, errMsg);
-        throw new Error(errMsg);
-      }
-
+      await register(payload);
       setConfirmEmail(email);
       setShowConfirmModal(true);
       setIsActive(false);
@@ -329,7 +266,7 @@ export default function LoginForm() {
               <input
                 type="text"
                 name="display_name"
-                placeholder="Имя пользователя"
+                placeholder="ФИО"
                 required
               />
               <i className="bx bxs-user" />

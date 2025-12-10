@@ -59,36 +59,39 @@ export async function getPreciseAddress(latitude: number, longitude: number): Pr
 }
 
 export async function getLocationByIP(): Promise<{lat: number, lon: number, city: string, accuracy?: number} | null> {
-  try {
-    const providers = [
-      'https://ipapi.co/json/',
-      'https://ipinfo.io/json?token=YOUR_TOKEN_HERE',
-      'https://geolocation-db.com/json/'
-    ];
-    
-    for (const provider of providers) {
-      try {
-        const response = await fetch(provider, { timeout: 3000 });
-        const data = await response.json();
-        
-        if (data.latitude && data.longitude) {
-          console.log('IP Location from', provider, ':', data);
-          return {
-            lat: data.latitude,
-            lon: data.longitude,
-            city: data.city || data.region || data.country_name || "Неизвестно",
-            accuracy: data.accuracy || null
-          };
-        }
-      } catch (providerError) {
-        console.warn(`Provider ${provider} failed:`, providerError);
-        continue;
+  const providers = [
+    'https://ipapi.co/json/',
+    'https://ipinfo.io/json?token=YOUR_TOKEN_HERE',
+    'https://geolocation-db.com/json/'
+  ];
+
+  for (const provider of providers) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    try {
+      const response = await fetch(provider, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      const data = await response.json();
+      
+      if (data.latitude && data.longitude) {
+        console.log('IP Location from', provider, ':', data);
+        return {
+          lat: data.latitude,
+          lon: data.longitude,
+          city: data.city || data.region || data.country_name || "Неизвестно",
+          accuracy: data.accuracy || null
+        };
+      }
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn(`Provider ${provider} timed out.`);
+      } else {
+        console.warn(`Provider ${provider} failed:`, error);
       }
     }
-    
-    return null;
-  } catch (error) {
-    console.error("Ошибка IP-геолокации:", error);
-    return null;
   }
+  
+  return null;
 }

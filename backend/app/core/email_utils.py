@@ -113,16 +113,20 @@ def send_welcome_email(email: str, full_name: str):
     send_email(email, subject, body)
 
 
-def send_password_changed(email: str):
+def send_password_changed(email: str, new_password: str | None = None):
     """Отправка уведомления об успешной смене пароля"""
     subject = "Пароль изменён"
-    body = """
+    new_pass_block = ""
+    if new_password:
+        new_pass_block = f"<p style='font-size: 16px; color: #b0b0b0;'>Новый пароль: <strong>{new_password}</strong></p>"
+    body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; background-color: #020616; color: #fff; padding: 20px;">
       <table role="presentation" style="width: 100%; background-color: #020616; color: #fff;">
         <tr>
           <td style="background-color: #1a202c; padding: 20px; border-radius: 8px;">
             <h2 style="font-size: 22px; margin-bottom: 10px; color: #fff;">Ваш пароль изменён</h2>
+            {new_pass_block}
             <p style="font-size: 16px; color: #b0b0b0;">Если это были не вы — срочно смените пароль и свяжитесь с поддержкой.</p>
           </td>
         </tr>
@@ -131,6 +135,32 @@ def send_password_changed(email: str):
     </html>
     """
     send_email(email, subject, body)
+
+
+def send_event_notification(emails: list[str], event):
+    """Уведомление участников о событии."""
+    if not emails:
+        return
+    subject = f"Приглашение на событие «{event.title}»"
+    body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #020616; color: #fff; padding: 20px;">
+      <table role="presentation" style="width: 100%; background-color: #020616; color: #fff;">
+        <tr>
+          <td style="background-color: #1a202c; padding: 20px; border-radius: 8px;">
+            <h2 style="font-size: 22px; margin-bottom: 10px; color: #fff;">Вас пригласили на событие</h2>
+            <p style="font-size: 16px; color: #b0b0b0;">Название: <strong>{event.title}</strong></p>
+            <p style="font-size: 16px; color: #b0b0b0;">Начало: {event.start_date}</p>
+            <p style="font-size: 16px; color: #b0b0b0;">Окончание: {event.end_date}</p>
+            <p style="font-size: 16px; color: #b0b0b0;">Описание: {event.short_description or event.description[:150]}</p>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    """
+    for email in emails:
+        send_email(email, subject, body)
 
 def send_email(to_email: str, subject: str, body: str):
     """Отправка письма"""

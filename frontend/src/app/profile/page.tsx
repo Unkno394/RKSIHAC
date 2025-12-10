@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Prism from "@/components/Prism";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import Prism from "@/shared/ui/Prism";
+import { FiEye, FiEyeOff, FiArrowLeft } from "react-icons/fi";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -18,6 +18,7 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [currentEmail, setCurrentEmail] = useState("");
+  const [avatarDefaults] = useState<string[]>(["/def1.png", "/def2.png", "/def3.png", "/def4.png"]);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -39,7 +40,14 @@ const ProfilePage: React.FC = () => {
         setEmail(data.email || "");
         setCurrentEmail(data.email || "");
         setAbout(data.about || "");
-        setAvatar(data.avatar_url || null);
+        const persistedDefault = localStorage.getItem("avatar_default");
+        let initialAvatar = data.avatar_url || null;
+        if (!initialAvatar) {
+          const chosen = persistedDefault || avatarDefaults[Math.floor(Math.random() * avatarDefaults.length)];
+          localStorage.setItem("avatar_default", chosen);
+          initialAvatar = chosen;
+        }
+        setAvatar(initialAvatar);
       } catch (err: any) {
         setError(err?.message || "Ошибка загрузки профиля");
       }
@@ -84,6 +92,13 @@ const ProfilePage: React.FC = () => {
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-white overflow-hidden">
+      <button
+        onClick={() => window.history.back()}
+        className="fixed top-4 left-4 z-50 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/60 border border-white/10 text-white hover:bg-black/80 transition"
+      >
+        <FiArrowLeft className="w-4 h-4" />
+        Назад
+      </button>
       {/* Фоновая призма */}
       <div className="pointer-events-none absolute inset-0">
         <Prism animationType="rotate" suspendWhenOffscreen noise={0.35} scale={3.6} />
