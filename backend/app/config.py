@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings
 from pydantic import AnyUrl
 
@@ -19,7 +20,10 @@ class Settings(BaseSettings):
     FRONTEND_BASE_URL: str = "http://localhost:3000"
 
     class Config:
-        env_file = ".env"
+        # На проде (Render и др.) не тащим .env из репозитория, чтобы случайно
+        # не подключаться к локальному Postgres. Передавайте DATABASE_URL через
+        # переменные окружения.
+        env_file = None if os.getenv("RENDER") else ".env"
 
 
 settings = Settings()
