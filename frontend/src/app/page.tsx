@@ -108,6 +108,8 @@ const HomePage: React.FC = () => {
     shortDescription?: string;
     description?: string;
     isFull?: boolean;
+    ratingAvg?: number;
+    ratingCount?: number;
   };
 
   const [myEvents, setMyEvents] = useState<CardEvent[]>([]);
@@ -311,6 +313,7 @@ const HomePage: React.FC = () => {
         if (!res.ok) throw new Error("Не удалось загрузить события");
         const data: ApiEvent[] = await res.json();
         const mapped: CardEvent[] = data.map((e) => {
+          const rating = ratingsCache[e.id];
           const isFull = e.max_participants ? e.participants.length >= e.max_participants : false;
           const inferred = classifyCategories(e.title || "", e.description || e.short_description || "");
           const category = e.category && e.category !== "прочее" ? e.category : inferred[0] || "прочее";
@@ -332,7 +335,9 @@ const HomePage: React.FC = () => {
             price: e.price,
             shortDescription: e.short_description || "",
             description: e.description,
-            isFull
+            isFull,
+            ratingAvg: rating?.avg,
+            ratingCount: rating?.count,
           };
         });
         setEvents(mapped);
@@ -359,6 +364,7 @@ const HomePage: React.FC = () => {
         const data: ApiEvent[] = await res.json();
         if (stop) return;
         const mapped: CardEvent[] = data.map((e) => {
+          const rating = ratingsCache[e.id];
           const isFull = e.max_participants ? e.participants.length >= e.max_participants : false;
           const inferred = classifyCategories(e.title || "", e.description || e.short_description || "");
           const category = e.category && e.category !== "прочее" ? e.category : inferred[0] || "прочее";
@@ -380,7 +386,9 @@ const HomePage: React.FC = () => {
             price: e.price,
             shortDescription: e.short_description || "",
             description: e.description,
-            isFull
+            isFull,
+            ratingAvg: rating?.avg,
+            ratingCount: rating?.count,
           };
         });
         setEvents(mapped);
@@ -959,13 +967,20 @@ const HomePage: React.FC = () => {
                               {event.category || "Событие"}
                             </span>
                             
-                            <h4 className="font-medium mb-2 line-clamp-2 group-hover:text-blue-300 transition-colors">
-                              {event.title}
-                            </h4>
-                            
-                            <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
-                              <FiCalendar className="w-3 h-3" />
-                              <span>{event.date}</span>
+                      <h4 className="font-medium mb-2 line-clamp-2 group-hover:text-blue-300 transition-colors">
+                        {event.title}
+                      </h4>
+                      {event.ratingAvg != null && (
+                        <div className="flex items-center gap-1 text-xs text-yellow-300 mb-2">
+                          <FiStar className="w-4 h-4" />
+                          <span>{event.ratingAvg.toFixed(1)}</span>
+                          {event.ratingCount ? <span className="text-white/50">({event.ratingCount})</span> : null}
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
+                        <FiCalendar className="w-3 h-3" />
+                        <span>{event.date}</span>
                             </div>
                             
                             <div className="flex items-center justify-between">
@@ -984,131 +999,6 @@ const HomePage: React.FC = () => {
               </div>
             )}
 
-            {/* Основные события */}
-            <div className="mb-12">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold mb-1">Все события</h2>
-                  <p className="text-sm text-gray-400">
-                    {filteredEvents.length} событий
-                  </p>
-                </div>
-              </div>
-              
-              {eventsLoading && (
-                <div className="text-center text-gray-400 py-10">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                  Загрузка событий...
-                </div>
-              )}
-              
-              {eventsError && (
-                <div className="text-center text-red-300 py-10">
-                  <FiAlertCircle className="w-10 h-10 mx-auto mb-4" />
-                  {eventsError}
-                </div>
-              )}
-              
-              {!eventsLoading && !eventsError && filteredEvents.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {filteredEvents.map(event => {
-                    return (
-                      <div
-                        key={event.id}
-                        className="group relative overflow-hidden rounded-2xl border border-gray-800 transition-all duration-300 hover:border-blue-500/30 bg-black/40"
-                        onClick={() => (window.location.href = `/events/${event.id}`)}
-                      >
-                        {/* Изображение события */}
-                        <div className="h-44 overflow-hidden relative">
-                          <img 
-                            src={event.image} 
-                            alt={event.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                          
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                          
-                          {/* Статус в углу */}
-                          {event.status && (
-                            <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-medium ${getEventStatusColor(event.status)}`}>
-                              {event.status === "active" && "Активное"}
-                              {event.status === "past" && "Прошедшее"}
-                              {event.status === "cancelled" && "Отменено"}
-                            </div>
-                          )}
-                          
-                          {/* Категория */}
-                          <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/70 backdrop-blur-sm text-xs font-medium text-blue-300">
-                            {event.category}
-                          </div>
-                        </div>
-
-                        {/* Контент карточки */}
-                        <div className="p-5">
-                          <h3 className="text-lg font-semibold mb-3 group-hover:text-blue-300 transition-colors line-clamp-2">
-                            {event.title}
-                          </h3>
-                          
-                          {event.shortDescription && (
-                            <p className="text-sm text-gray-300 mb-3 line-clamp-2">
-                              {event.shortDescription}
-                            </p>
-                          )}
-                          
-                          <div className="space-y-2 mb-4">
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                              <FiCalendar className="w-4 h-4" />
-                              <span>{event.date} • {event.time}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                              <FiMapPin className="w-4 h-4" />
-                              <span>{event.city}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex gap-2 pt-3 border-t border-gray-800">
-                            <button className="flex-1 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium">
-                              Подробнее
-                            </button>
-                            
-                            <button
-                              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                                event.isFull
-                                  ? "bg-red-900/30 text-red-300 cursor-not-allowed"
-                                  : "bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 transition-opacity"
-                              }`}
-                              disabled={event.isFull}
-                            >
-                              {event.isFull ? "Нет мест" : "Участвовать"}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {!eventsLoading && !eventsError && filteredEvents.length === 0 && events.length > 0 && (
-                <div className="text-center py-12 bg-black/40 border border-gray-800 rounded-2xl">
-                  <FiCalendar className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                  <h3 className="text-xl font-bold mb-3">Событий не найдено</h3>
-                  <p className="text-gray-400 mb-6 max-w-md mx-auto">
-                    Попробуйте изменить фильтры
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSelectedCategory("прочее");
-                      setSelectedCity("Ростов");
-                    }}
-                    className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 transition-opacity"
-                  >
-                    Сбросить фильтры
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
@@ -1125,3 +1015,10 @@ const HomePage: React.FC = () => {
 };
 
 export default HomePage;
+  const ratingsCache =
+    typeof window !== "undefined"
+      ? (JSON.parse(localStorage.getItem("eventRatings") || "{}") as Record<
+          string,
+          { avg: number; count: number }
+        >)
+      : {};

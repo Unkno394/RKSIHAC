@@ -84,6 +84,9 @@ export default function EventPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [allEvents, setAllEvents] = useState<EventDto[]>([]);
   const [similarEvents, setSimilarEvents] = useState<EventDto[]>([]);
+  const [ratingAvg, setRatingAvg] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState<number>(0);
+  const [userRating, setUserRating] = useState<number | null>(null);
 
   const accessToken = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
 
@@ -123,6 +126,26 @@ export default function EventPage() {
     loadAll();
   }, []);
 
+  // Рейтинг из localStorage
+  const loadRatings = (id: string) => {
+    const map = JSON.parse(localStorage.getItem("eventRatings") || "{}") as Record<
+      string,
+      { avg: number; count: number; ratings?: Record<string, number> }
+    >;
+    const entry = map[id];
+    if (entry) {
+      setRatingAvg(entry.avg);
+      setRatingCount(entry.count || 0);
+      if (profile?.id && entry.ratings && entry.ratings[profile.id] != null) {
+        setUserRating(entry.ratings[profile.id]);
+      }
+    } else {
+      setRatingAvg(null);
+      setRatingCount(0);
+      setUserRating(null);
+    }
+  };
+
   // Загрузка события
   useEffect(() => {
     if (!eventId) return;
@@ -140,6 +163,7 @@ export default function EventPage() {
           image_url: data.image_url || "/events.png",
         });
         setParticipantsCount(data.participants?.length || 0);
+        loadRatings(data.id);
         
         if (profile && data.participants?.includes(profile.id)) {
           setIsParticipating(true);
@@ -202,6 +226,31 @@ export default function EventPage() {
     };
     return () => socket.close();
   }, [eventId, profile?.id]);
+
+  const handleRate = (value: number) => {
+    if (!eventId || userRating) return; // уже оценил
+    // событие должно быть завершено
+    const now = new Date();
+    const ended = event ? new Date(event.end_date) < now : true;
+    if (!ended) return;
+
+    const map = JSON.parse(localStorage.getItem("eventRatings") || "{}") as Record<
+      string,
+      { avg: number; count: number; ratings: Record<string, number> }
+    >;
+    const entry = map[eventId] || { avg: 0, count: 0, ratings: {} };
+    const userId = profile?.id || "anon";
+    if (entry.ratings[userId] != null) return;
+
+    entry.ratings[userId] = value;
+    entry.count += 1;
+    entry.avg = Object.values(entry.ratings).reduce((a, b) => a + b, 0) / entry.count;
+    map[eventId] = entry;
+    localStorage.setItem("eventRatings", JSON.stringify(map));
+    setUserRating(value);
+    setRatingCount(entry.count);
+    setRatingAvg(entry.avg);
+  };
 
   const status = useMemo(() => {
     if (!event) return "loading";
@@ -641,6 +690,13 @@ export default function EventPage() {
                           <span className="text-white/60">Город:</span>
                           <span className="font-medium text-lg">{event.city}</span>
                         </div>
+                        <div className="flex items-center gap-2 mt-3 text-sm text-yellow-300">
+                          <FiStar className="w-4 h-4" />
+                          <span>
+                            {ratingAvg != null ? ratingAvg.toFixed(1) : "—"}
+                            {ratingCount > 0 ? ` (${ratingCount})` : ""}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     
@@ -684,6 +740,40 @@ export default function EventPage() {
                           )}
                         </div>
                       )}
+
+                      {/* Рейтинг */}
+                      <div className="glass-ios border border-white/10 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <FiStar className="w-5 h-5 text-yellow-300" />
+                            <h3 className="font-semibold">Рейтинг события</h3>
+                          </div>
+                          <div className="text-yellow-300 font-semibold">
+                            {ratingAvg != null ? ratingAvg.toFixed(1) : "—"}{" "}
+                            {ratingCount > 0 ? `(${ratingCount})` : ""}
+                          </div>
+                        </div>
+                        <p className="text-sm text-white/60 mb-3">
+                          Оценить можно после завершения события. Оценка сохраняется и изменить её нельзя.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {[1, 2, 3, 4, 5].map((star) => {
+                            const active = userRating ? star <= userRating : star <= Math.round(ratingAvg || 0);
+                            return (
+                              <button
+                                key={star}
+                                className={`text-2xl transition-transform ${
+                                  active ? "text-yellow-300" : "text-white/30"
+                                } ${userRating ? "cursor-not-allowed" : "hover:scale-110"}`}
+                                onClick={() => handleRate(star)}
+                                disabled={!!userRating || (event && new Date(event.end_date) > new Date())}
+                              >
+                                ★
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       
                       {/* Статус пользователя */}
                       <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">

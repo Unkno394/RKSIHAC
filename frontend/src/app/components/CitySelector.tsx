@@ -88,24 +88,23 @@ const CitySelector: React.FC<CitySelectorProps> = ({
 
   // Автоматическое определение местоположения при загрузке компонента
   useEffect(() => {
-    const savedCity = localStorage.getItem("userCity");
-    
-    if (!savedCity && locationStatus === "not_tried") {
-      // Ждем немного перед автоматическим определением
-      const timer = setTimeout(() => {
+    let triggered = false;
+    const timer = setTimeout(() => {
+      if (!triggered && locationStatus === "not_tried") {
+        triggered = true;
         detectUserLocation();
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, []);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [locationStatus, detectUserLocation]);
 
   // Фильтрация городов
-  const filteredCities = searchQuery
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredCities = normalizedQuery
     ? cities.filter(city =>
-        city.name.toLowerCase().includes(searchQuery.toLowerCase())
+        city.name.toLowerCase().includes(normalizedQuery)
       )
-    : cities.slice(0, 20); // Показываем только топ-20 городов по умолчанию
+    : cities.slice(0, 50); // немного расширили список по умолчанию
 
   const handleCitySelect = (cityName: string) => {
     setSelectedCity(cityName);
