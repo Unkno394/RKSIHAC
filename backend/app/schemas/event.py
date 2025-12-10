@@ -3,6 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, validator
+from app.schemas.auth import ProfileResponse
 
 
 class EventCreateRequest(BaseModel):
@@ -20,8 +21,8 @@ class EventCreateRequest(BaseModel):
     @validator("end_date")
     def end_after_start(cls, v, values):
         start = values.get("start_date")
-        if start and v <= start:
-            raise ValueError("Дата окончания должна быть позже даты начала")
+        if start and v < start:
+            raise ValueError("Дата окончания должна быть не раньше даты начала")
         return v
 
 
@@ -41,8 +42,8 @@ class EventUpdateRequest(BaseModel):
     @validator("end_date")
     def end_after_start(cls, v, values):
         start = values.get("start_date")
-        if start and v and v <= start:
-            raise ValueError("Дата окончания должна быть позже даты начала")
+        if start and v and v < start:
+            raise ValueError("Дата окончания должна быть не раньше даты начала")
         return v
 
 
@@ -62,4 +63,15 @@ class EventResponse(BaseModel):
     participants: List[UUID]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+class ParticipationUser(BaseModel):
+    id: UUID
+    full_name: str
+    email: str
+
+
+class ParticipationLogResponse(BaseModel):
+    active: List[ParticipationUser]
+    declined: List[ParticipationUser]

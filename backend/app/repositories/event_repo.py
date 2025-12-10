@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Event, User
+from app.db.models import Event, User, EventParticipantLog
 
 
 def list_events(
@@ -22,6 +22,18 @@ def list_events(
 
 def get_event(db: Session, event_id: UUID) -> Optional[Event]:
     return db.query(Event).filter(Event.id == event_id).first()
+
+
+def list_events_by_user(db: Session, user: User) -> List[Event]:
+    return (
+        db.query(Event)
+        .filter(
+            Event.is_deleted == False,  # noqa: E712
+            Event.participants.any(User.id == user.id),
+        )
+        .order_by(Event.start_date)
+        .all()
+    )
 
 
 def create_event(
@@ -108,3 +120,20 @@ def soft_delete_event(db: Session, event: Event) -> Event:
     db.commit()
     db.refresh(event)
     return event
+
+
+def add_participant_log(db: Session, event_id: UUID, user_id: UUID, action: str) -> EventParticipantLog:
+    log = EventParticipantLog(event_id=event_id, user_id=user_id, action=action)
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return log
+
+
+def get_participant_logs(db: Session, event_id: UUID) -> List[EventParticipantLog]:
+    return (
+        db.query(EventParticipantLog)
+        .filter(EventParticipantLog.event_id == event_id)
+        .order_by(EventParticipantLog.created_at.asc())
+        .all()
+    )

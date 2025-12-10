@@ -125,7 +125,7 @@ const CitySelector: React.FC<CitySelectorProps> = ({
   };
 
   return (
-    <div className="mb-6 relative">
+    <div className="mb-6 relative z-[300]">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         {/* Кнопка выбора города */}
         <div className="relative inline-block" ref={dropdownRef}>
@@ -189,14 +189,12 @@ const CitySelector: React.FC<CitySelectorProps> = ({
               />
             </svg>
           </button>
-
-          {/* Выпадающее меню */}
-          {showCityDropdown && (
-            <div
-              ref={menuRef}
-              className="absolute top-full left-0 mt-3 w-full sm:w-[420px] bg-slate-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl z-[99999] max-h-[500px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-              onClick={(e) => e.stopPropagation()}
-            >
+{showCityDropdown && (
+  <div
+    ref={menuRef}
+    className="absolute top-full left-0 mt-3 w-full sm:w-[420px] bg-slate-900/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl z-[99999] max-h-[500px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+    onClick={(e) => e.stopPropagation()}
+  >
               {/* Заголовок */}
               <div className="p-5 border-b border-white/10 bg-gradient-to-b from-slate-800/80 to-slate-900/80">
                 <div className="flex items-center justify-between mb-4">
@@ -388,12 +386,7 @@ const CitySelector: React.FC<CitySelectorProps> = ({
         {/* Индикатор статуса (вне меню) */}
         {!showCityDropdown && (
           <div className="flex items-center gap-2">
-            {locationStatus === "success" && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-sm text-green-300">Автоопределен</span>
-              </div>
-            )}
+
             {locationStatus === "failed" && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                 <span className="w-2 h-2 rounded-full bg-yellow-500"></span>

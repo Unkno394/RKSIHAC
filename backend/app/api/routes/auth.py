@@ -24,8 +24,14 @@ from app.schemas.auth import (
     ResetCodeVerifyRequest,
     ResetPasswordRequest,
     UserListResponse,
+    ChangeEmailRequest,
 )
-from app.schemas.event import EventCreateRequest, EventResponse, EventUpdateRequest
+from app.schemas.event import (
+    EventCreateRequest,
+    EventResponse,
+    EventUpdateRequest,
+    ParticipationLogResponse,
+)
 from app.services import auth_service, event_service
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -110,6 +116,7 @@ def verify_reset_code(data: ResetCodeVerifyRequest, db: Session = Depends(get_db
         )
     return {"message": "Код верен. Можно задать новый пароль."}
 
+
 # Роут для получения информации о текущем пользователе
 def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
@@ -118,7 +125,11 @@ def get_current_user(
     if payload is None:
         raise HTTPException(status_code=403, detail="Неверный или истекший токен")
     user_id = payload.get("sub")
-    user = user_repo.get_by_id(db, UUID(str(user_id)))
+    try:
+        user_uuid = UUID(str(user_id))
+    except Exception:
+        raise HTTPException(status_code=401, detail="Неверный токен")
+    user = user_repo.get_by_id(db, user_uuid)
     if not user or user.is_deleted:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     return user
@@ -157,10 +168,45 @@ def update_user_profile(
     )
 
 
+@router.post("/change-email", response_model=ProfileResponse)
+def change_email(
+    data: ChangeEmailRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        user = auth_service.change_email(db, user, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    return ProfileResponse(
+        id=user.id,
+        full_name=user.full_name,
+        email=user.email,
+        role=user.role,
+        is_active=user.is_active,
+        avatar_url=user.avatar_url,
+        about=user.about,
+    )
+
+
 def require_admin(user: User = Depends(get_current_user)) -> User:
     if user.role != "ADMIN":
         raise HTTPException(status_code=403, detail="Доступ только для администратора")
     return user
+
+
+@router.get("/events/{event_id}/participation-log", response_model=ParticipationLogResponse)
+def participation_log(
+    event_id: UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    result = event_service.get_participation_log(db, event_id)
+    return ParticipationLogResponse(
+        active=result["active"],
+        declined=result["declined"],
+    )
 
 
 # ---------------------- Админ: пользователи ----------------------
@@ -340,3 +386,29 @@ def delete_event(
     if not event:
         raise HTTPException(status_code=404, detail="Событие не найдено")
     return event
+
+
+@router.post("/events/{event_id}/join", response_model=EventResponse)
+def join_event(
+    event_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return event_service.join_event(db, event_id, user)
+
+
+@router.post("/events/{event_id}/leave", response_model=EventResponse)
+def leave_event(
+    event_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return event_service.leave_event(db, event_id, user)
+
+
+@router.get("/events/my", response_model=List[EventResponse])
+def list_my_events(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return event_service.list_user_events(db, user)

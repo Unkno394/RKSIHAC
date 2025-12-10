@@ -5,6 +5,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
 import Modal from '@/shared/ui/Modal';
+import { useAlert } from '../components/CustomAlert';
 import {
   login,
   register,
@@ -28,6 +29,7 @@ export default function LoginForm() {
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+  const { AlertComponent, showAlert } = useAlert();
 
   // состояние для глазиков
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -69,10 +71,13 @@ export default function LoginForm() {
     try {
       const data = await login({ email, password });
       localStorage.setItem('access_token', data?.access_token);
+      showAlert('Добро пожаловать!', 'success');
       router.push('/');
     } catch (err: any) {
       console.error('[auth] login error', err);
-      setLoginError(err?.message || 'Ошибка при входе');
+      const msg = err?.message || 'Ошибка при входе';
+      setLoginError(msg);
+      showAlert(msg, 'error');
     } finally {
       setLoginLoading(false);
       console.log('[auth] login submit end');
@@ -94,9 +99,12 @@ export default function LoginForm() {
       setResetEmail(email);
       setResetMessage('Письмо с кодом отправлено. Проверьте почту.');
       setResetStep('verify');
+      showAlert('Письмо с кодом отправлено. Проверьте почту.', 'success');
     } catch (err: any) {
       console.error('[auth] forgot error', err);
-      setResetError(err?.message || 'Не удалось отправить письмо');
+      const msg = err?.message || 'Не удалось отправить письмо';
+      setResetError(msg);
+      showAlert(msg, 'error');
     } finally {
       setResetLoading(false);
       console.log('[auth] forgot submit end');
@@ -118,9 +126,12 @@ export default function LoginForm() {
       setResetMessage('Код подтверждён. Введите новый пароль.');
       setResetToken(token);
       setResetStep('reset');
+      showAlert('Код подтверждён. Введите новый пароль.', 'success');
     } catch (err: any) {
       console.error('[auth] verify error', err);
-      setResetError(err?.message || 'Неверный или истёкший код');
+      const msg = err?.message || 'Неверный или истёкший код';
+      setResetError(msg);
+      showAlert(msg, 'error');
     } finally {
       setResetLoading(false);
       console.log('[auth] verify submit end');
@@ -143,9 +154,12 @@ export default function LoginForm() {
       setResetMessage('Пароль успешно обновлён. Можно войти.');
       setShowResetModal(false);
       setIsActive(false);
+      showAlert('Пароль успешно обновлён. Можно войти.', 'success');
     } catch (err: any) {
       console.error('[auth] reset error', err);
-      setResetError(err?.message || 'Не удалось сбросить пароль');
+      const msg = err?.message || 'Не удалось сбросить пароль';
+      setResetError(msg);
+      showAlert(msg, 'error');
     } finally {
       setResetLoading(false);
       console.log('[auth] reset submit end');
@@ -163,6 +177,16 @@ export default function LoginForm() {
     const password = formData.get('password') as string;
     const display_name = formData.get('display_name') as string;
 
+    // Валидируем ФИО: минимум три слова, только русские буквы и пробелы
+    const fioRegex = /^[А-ЯЁа-яё]+(?:\s+[А-ЯЁа-яё]+){2,}$/;
+    if (!fioRegex.test(display_name.trim())) {
+      const msg = 'Введите ФИО полностью (только русские буквы, минимум три слова).';
+      setRegisterError(msg);
+      showAlert(msg, 'warning');
+      setRegisterLoading(false);
+      return;
+    }
+
     try {
       const payload = {
         full_name: display_name,
@@ -176,9 +200,12 @@ export default function LoginForm() {
       setConfirmEmail(email);
       setShowConfirmModal(true);
       setIsActive(false);
+      showAlert('Регистрация прошла успешно. Подтвердите почту.', 'success');
     } catch (err: any) {
       console.error('[auth] register error', err);
-      setRegisterError(err?.message || 'Ошибка при регистрации');
+      const msg = err?.message || 'Ошибка при регистрации';
+      setRegisterError(msg);
+      showAlert(msg, 'error');
     } finally {
       setRegisterLoading(false);
       console.log('[auth] register submit end');
@@ -189,6 +216,8 @@ export default function LoginForm() {
   return (
     <div className="w-screen h-screen flex justify-center items-center bg-[#191538] relative">
       <div className="fixed inset-0 w-full h-full -z-10" />
+
+      <AlertComponent />
 
       <div className={`form-container ${isActive ? 'active' : ''}`}>
         {/* ----------- ЛОГИН ----------- */}

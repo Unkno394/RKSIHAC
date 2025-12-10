@@ -76,6 +76,11 @@ class ResetCodeVerifyRequest(BaseModel):
     token: str
 
 
+class ChangeEmailRequest(BaseModel):
+    new_email: EmailStr
+    password: str
+
+
 class ProfileResponse(BaseModel):
     id: UUID
     full_name: str

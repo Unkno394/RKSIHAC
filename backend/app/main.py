@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import auth  # Подключение маршрута для авторизации и пользователей
+import asyncio
+from app.api.routes import auth, ws  # Подключение маршрутов
 from app.db.base import Base, engine
+from app.core.ws_manager import ws_manager
 
 # Создание таблиц в базе данных (для простоты без Alembic)
 Base.metadata.create_all(bind=engine)
@@ -20,8 +22,13 @@ app.add_middleware(
 
 # Подключаем маршруты (роутеры) для аутентификации и пользователей
 app.include_router(auth.router)  # Включаем все маршруты из auth.py, включая /get_users
+app.include_router(ws.router)
+
+
+@app.on_event("startup")
+async def set_loop_for_ws():
+    ws_manager.set_loop(asyncio.get_running_loop())
 
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "Afisha Auth API running"}
-

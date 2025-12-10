@@ -63,7 +63,7 @@ const Header: React.FC<HeaderProps> = ({ isAuthed, setIsMenuOpen, isMenuOpen }) 
             </a>
 
             <a
-              href="/events"
+              href="/my-events"
               className="
                 hidden md:inline-flex items-center
                 bg-white/10 backdrop-blur-sm px-4 md:px-6 py-2 rounded-full
@@ -71,13 +71,6 @@ const Header: React.FC<HeaderProps> = ({ isAuthed, setIsMenuOpen, isMenuOpen }) 
               "
             >
               Мои события
-            </a>
-
-            <a
-              href="/my-tickets"
-              className="hidden md:inline-flex items-center text-white/80 hover:text-white transition-colors whitespace-nowrap text-sm md:text-base ml-2"
-            >
-              Мои билеты
             </a>
 
             <button

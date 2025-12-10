@@ -50,6 +50,16 @@ event_participants = Table(
 )
 
 
+class EventParticipantLog(Base):
+    __tablename__ = "event_participant_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("events.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    action = Column(String(10), nullable=False)  # join | leave
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Event(Base):
     __tablename__ = "events"
 

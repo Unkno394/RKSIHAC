@@ -15,6 +15,7 @@ from app.schemas.auth import (
     RegisterRequest,
     LoginRequest,
     ResetPasswordRequest,
+    ChangeEmailRequest,
 )
 
 
@@ -128,3 +129,19 @@ def admin_reset_password(db: Session, user: User, new_password: str):
     new_hash = hash_password(_trim_password(new_password))
     user_repo.update_password(db, user, new_hash)
     email_utils.send_password_changed(user.email, new_password)
+
+
+def change_email(db: Session, user: User, data: ChangeEmailRequest):
+    # проверяем пароль
+    if not verify_password(_trim_password(data.password), user.password_hash):
+        raise ValueError("Неверный пароль")
+    # проверяем, что новый email не занят
+    existing = user_repo.get_by_email(db, data.new_email)
+    if existing and existing.id != user.id:
+        raise ValueError("Этот email уже используется другим пользователем")
+
+    user.email = data.new_email
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
