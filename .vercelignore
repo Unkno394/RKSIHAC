@@ -1,0 +1,17 @@
+# Ignore backend code when deploying frontend to Vercel
+backend/
+main.py
+requirements.txt
+venv/
+.venv/
+*.pyc
+__pycache__/
+
+# Node/Next build artifacts and local files
+.next/
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+

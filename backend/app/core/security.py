@@ -14,7 +14,8 @@ from passlib.context import CryptContext
 
 from app.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Используем bcrypt_sha256, чтобы убрать жёсткий лимит 72 байта на пароль
+pwd_context = CryptContext(schemes=["bcrypt_sha256"], deprecated="auto")
 
 
 def _prepare_password(password: Union[str, bytes]) -> str:
