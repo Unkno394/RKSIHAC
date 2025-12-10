@@ -26,7 +26,10 @@ cd backend
 python -m venv venv && source venv/bin/activate  # Windows: venv\\Scripts\\activate
 pip install -r ../requirements.txt
 export DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/aficha
+# локально
 uvicorn app.main:app --reload
+# на хостинге (Render и пр.)
+uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
 
 ### Frontend
@@ -47,4 +50,3 @@ npm run build && npm run start
 - WebSocket: `ws://<API_URL>/ws/events` — живые обновления участия.
 - ТГ-бот уведомлений: https://t.me/af1shanotify_bot (репозиторий выше).
 - Админка: `/admin`, доступна только ADMIN-ролям или whitelisted e-mail.
-
